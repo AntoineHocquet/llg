@@ -12,7 +12,7 @@ real theta=0.5;
 //  adapt=1: adapt mesh at every time step
 //  adapt=0: fixed mesh
 int adapt=1;
-real erreur=0.5;
+real erreur=%%adapt_precision%%;
 
 // For energy plots (E: Dirichlet energy)
 real[int] E(N);

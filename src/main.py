@@ -1,8 +1,7 @@
 # main.py
 import argparse
 from simulate import run_simulation
-from visualize import generate_visualizations
-from visualize_gif import generate_gif
+from visualize import generate_visualizations, generate_gif
 
 
 def main():
