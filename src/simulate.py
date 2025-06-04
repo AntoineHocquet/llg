@@ -26,8 +26,8 @@ def run_simulation():
     params = load_config()
 
     # Template and final EDP paths
-    template_edp = os.path.join(edp_path, "heat_disk_template.edp")
-    final_edp = os.path.join(edp_path, "heat_disk.edp")
+    template_edp = os.path.join(edp_path, "llg_disk_template.edp")
+    final_edp = os.path.join(edp_path, "llg_disk.edp")
 
     print("Generating .edp file with parameters from params.json...")
     generate_edp_with_params(template_edp, final_edp, params)
@@ -36,11 +36,14 @@ def run_simulation():
     docker_cmd = [
         "docker", "run", "--rm",
         "-v", f"{edp_path}:/data",
-        "antoinehocquet/freefem", "FreeFem++", "/data/heat_disk.edp"
+        "antoinehocquet/freefem", "FreeFem++", "/data/llg_disk.edp"
     ]
 
     print("Running FreeFEM via Docker...")
     try:
         subprocess.run(docker_cmd, check=True)
+        # print success with fancy emoji
+        print("\u2705 Simulation completed successfully!") 
+        print("\u2705 Results saved in data/solution_data.csv")
     except subprocess.CalledProcessError as e:
         print("Simulation failed:", e)

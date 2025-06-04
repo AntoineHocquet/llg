@@ -6,11 +6,11 @@ import matplotlib.tri as tri
 from matplotlib.animation import FuncAnimation
 
 def generate_gif():
-    print("Generating heat equation animation...")
+    print("Generating animation...")
 
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     csv_path = os.path.join(project_root, "data", "solution_data.csv")
-    gif_path = os.path.join(project_root, "data", "heat_equation_simulation.gif")
+    gif_path = os.path.join(project_root, "data", "llg_equation_simulation.gif")
 
     # Load the CSV data
     data = pd.read_csv(csv_path)
@@ -41,7 +41,7 @@ def generate_gif():
             triang, current_data['u'], cmap='inferno',
             vmin=u_min, vmax=u_max
         )
-        ax.set_title(f"Heat Equation at Time = {time_steps[frame]:.2f}s")
+        ax.set_title(f"LLG equation at time = {time_steps[frame]:.2f}s")
         ax.set_xlabel("X")
         ax.set_ylabel("Y")
         #return contour.collections

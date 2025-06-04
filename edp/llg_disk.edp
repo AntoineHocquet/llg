@@ -1,0 +1,118 @@
+// Time-stepping parameters
+real T = 1.0; // Final time
+real dt = 0.05; // Time step size
+int N = T / dt; // Number of time steps
+
+// Parameter theta (should >=0.5 to achieve numerical stability)
+//  theta=1: implicit scheme
+//  theta=0.5: semi-implicit scheme
+real theta=0.5;
+
+// Parameter adapt
+//  adapt=1: adapt mesh at every time step
+//  adapt=0: fixed mesh
+int adapt=0;
+real erreur=0.1;
+
+// For energy plots (E: Dirichlet energy)
+real[int] E(N);
+
+// Damping parameter
+real alpha=1;
+
+// precession term (gyromanetic)
+real beta=0;
+
+// Noise amplitude
+real epsilon=0;
+real nu=sqrt(epsilon*dt); 
+
+int Niter0=0;
+real Titer=0; 
+
+// useful macros
+macro u [u0,u1,u2]//
+macro phi [phi0,phi1,phi2]//
+macro v [v0,v1,v2]//
+macro grad(a) [dx(a[0]),dy(a[0]),dx(a[1]),dy(a[1]),dx(a[2]),dy(a[2])]//
+macro R(a) [[0,-a[2],a[1]],[a[2],0,-a[0]],[-a[1],a[0],0]]//
+macro rho(a) [[1,a[2],-a[1]],[-a[2],1,a[0]],[a[1],-a[0],1]]//
+macro dw [dw0,dw1,dw2]//
+
+// Define a 2D unit disk mesh
+border Circle(t = 0, 2*pi) { 
+    x = cos(t); 
+    y = sin(t); 
+};
+
+// build the mesh inside the border
+real K=50; // Number of mesh points
+mesh Th=buildmesh(Circle(K));
+
+// define finite element spaces
+fespace Vh(Th,P1);
+fespace Ph(Th,P0);
+Ph h = hTriangle; // hmax
+
+// Create output CSV file
+ofstream csvFile("/data/solution_data.csv");
+csvFile << "time,x,y,u\n"; // Header row for CSV
+
+// initialize variables
+// u0,u1,u2: magnetization
+// v0,v1,v2: LLG's increments
+// phi0,phi1,phi2: test functions
+// lambda,mu: Lagrange multipliers
+// dw0,dw1,dw2: noise
+Vh u0=1,u1=0,u2=0,phi0,phi1,phi2,v0,v1,v2,lambda,mu,dw0=0,dw1=0,dw2=0,diag;
+
+// Define variational formulation for LLG's increments
+problem sllg([v0,v1,v2,lambda],[phi0,phi1,phi2,mu])=int2d(Th)(alpha*v'*phi)
++ int2d(Th)(beta*v'*R(u)'*phi)
++ int2d(Th)((1+alpha^2)*theta*dt*grad(v)'*grad(phi))
++ int2d(Th)((1+alpha^2)*dt*grad(u)'*grad(phi))
++ int2d(Th,qft=qf1pTlump)(lambda*phi'*u)
++ int2d(Th,qft=qf1pTlump)(mu*v'*u)
++ int2d(Th)(dw'*rho(u)'*phi) 
++ on(1,v0=0,v1=0,v2=0); // Dirichlet boundary conditions
+
+// Parameter to tweak initial condition
+real gamma=0.05*3;
+
+// Inital condition
+func r = sqrt(x^2+y^2);
+func f = tan(pi*sqrt(x^2+y^2)-0.5*pi);func g = tan(gamma*sqrt(x^2+y^2)-0.5*pi);
+u0=2*f/(1+f^2+g^2);u1=2*g/(1+f^2+g^2);u2=(-1+f^2+g^2)/(1+f^2+g^2);
+
+// Time-stepping loop
+for (int tStep = 0; tStep <= N; tStep++) {
+    real currentTime = tStep * dt;
+
+    sllg; // Solve at the current time step (and assigns the result to v=[v0,v1,v2])
+
+    // adapt mesh if adapt !=0
+    Vh NN=sqrt((u0+v0)^2+(u1+v1)^2+(u2+v2)^2);
+    if (adapt) {
+        Th=adaptmesh(Th,[u1,u2],err=erreur);
+    }
+  
+    // Renormalization step to ensure that new solution is a unit-vector
+    Vh uu0=(u0+v0)/NN, uu1=(u1+v1)/NN, uu2=(u2+v2)/NN;
+    u0=uu0;u1=uu1;u2=uu2;
+
+    // Store data in CSV
+    // Loop over triangles
+    for (int k = 0; k < Th.nt; k++) {
+        // Loop over vertices in each triangle
+        for (int j = 0; j < 3; j++) {
+            real xCoord = Th[k][j].x;
+            real yCoord = Th[k][j].y;
+            real uValue0 = u0[][Vh(k, j)];
+            real uValue1 = u1[][Vh(k, j)];
+            real uValue2 = u2[][Vh(k, j)];
+            
+            csvFile << currentTime << "," << xCoord << "," << yCoord << "," << uValue0 << "," << uValue1 << "," << uValue2 << "\n";
+        }
+    }
+}
+

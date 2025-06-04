@@ -6,7 +6,7 @@ from visualize_gif import generate_gif
 
 
 def main():
-    parser = argparse.ArgumentParser(description="FreeFEM Simulation Pipeline")
+    parser = argparse.ArgumentParser(description="LLG Simulation Pipeline")
     parser.add_argument(
         "--run", choices=["sim", "viz", "gif", "all"], default="all",
         help="Choose whether to run the simulation, visualization, gif, or all"
