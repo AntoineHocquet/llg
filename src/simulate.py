@@ -44,6 +44,6 @@ def run_simulation():
         subprocess.run(docker_cmd, check=True)
         # print success with fancy emoji
         print("\u2705 Simulation completed successfully!") 
-        print("\u2705 Results saved in data/solution_data.csv")
+        print("\u2705 Results saved in edp/solution_data.csv")
     except subprocess.CalledProcessError as e:
         print("Simulation failed:", e)

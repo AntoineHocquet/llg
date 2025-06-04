@@ -1,0 +1,34 @@
+// init_llg.edp — Generates initial LLG data on the unit disk
+
+// Mesh on the unit disk
+int n = 50;
+mesh Th = buildmesh( 
+    square(n, n)[2*x - 1, 2*y - 1] 
+    & (x^2 + y^2 < 1.0 + 1e-6) 
+);
+
+// Define finite element space
+fespace Vh(Th, P1);
+Vh u0, u1, u2;
+
+// Define polar coordinates
+func real r = sqrt(x^2 + y^2);
+func real theta = atan2(y, x);
+
+// Initial condition
+func real u0_init = sin(pi * r) * cos(theta);
+func real u1_init = sin(pi * r) * sin(theta);
+func real u2_init = cos(pi * r);
+
+u0 = u0_init;
+u1 = u1_init;
+u2 = u2_init;
+
+// Output to CSV
+ofstream fout("/data/init_llg.csv");
+fout << "x,y,u0,u1,u2" << endl;
+for (int i = 0; i < Th.nv; ++i) {
+    real xx = Th(i).x;
+    real yy = Th(i).y;
+    fout << xx << "," << yy << "," << u0(xx,yy) << "," << u1(xx,yy) << "," << u2(xx,yy) << endl;
+}

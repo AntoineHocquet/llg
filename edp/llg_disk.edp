@@ -11,8 +11,8 @@ real theta=0.5;
 // Parameter adapt
 //  adapt=1: adapt mesh at every time step
 //  adapt=0: fixed mesh
-int adapt=0;
-real erreur=0.1;
+int adapt=1;
+real erreur=0.5;
 
 // For energy plots (E: Dirichlet energy)
 real[int] E(N);
@@ -21,7 +21,7 @@ real[int] E(N);
 real alpha=1;
 
 // precession term (gyromanetic)
-real beta=0;
+real beta=1;
 
 // Noise amplitude
 real epsilon=0;
@@ -46,7 +46,7 @@ border Circle(t = 0, 2*pi) {
 };
 
 // build the mesh inside the border
-real K=50; // Number of mesh points
+real K=12; // Number of mesh points
 mesh Th=buildmesh(Circle(K));
 
 // define finite element spaces
@@ -56,7 +56,7 @@ Ph h = hTriangle; // hmax
 
 // Create output CSV file
 ofstream csvFile("/data/solution_data.csv");
-csvFile << "time,x,y,u\n"; // Header row for CSV
+csvFile << "time,x,y,u0,u1,u2\n"; // Header row for CSV
 
 // initialize variables
 // u0,u1,u2: magnetization
@@ -80,9 +80,11 @@ problem sllg([v0,v1,v2,lambda],[phi0,phi1,phi2,mu])=int2d(Th)(alpha*v'*phi)
 real gamma=0.05*3;
 
 // Inital condition
-func r = sqrt(x^2+y^2);
-func f = tan(pi*sqrt(x^2+y^2)-0.5*pi);func g = tan(gamma*sqrt(x^2+y^2)-0.5*pi);
-u0=2*f/(1+f^2+g^2);u1=2*g/(1+f^2+g^2);u2=(-1+f^2+g^2)/(1+f^2+g^2);
+func r = sqrt(x^2 + y^2);
+func f = atan2(y, x);
+u0 = sin(pi * r) * cos(f);
+u1 = sin(pi * r) * sin(f);
+u2 = cos(pi * r);
 
 // Time-stepping loop
 for (int tStep = 0; tStep <= N; tStep++) {

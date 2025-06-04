@@ -18,8 +18,8 @@ It allows you to:
 Clone the repo and set up a virtual environment:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/FreeFEM-Simulation-App.git
-cd FreeFEM-Simulation-App
+git clone https://github.com/YOUR_USERNAME/llg.git
+cd llg
 python3 -m venv venv
 source venv/bin/activate
 pip install -e .
