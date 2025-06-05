@@ -1,9 +1,23 @@
 {
-    "T": 1.0,
-    "dt": 0.05,
-    "mesh_resolution": 12,
-    "alpha": 1.0,
-    "beta": 1.0,
-    "adapt_precision": 0.2
-  }
-  
+    "init_u0": "sin(pi * r) * cos(theta)",
+    "init_u1": "sin(pi * r) * sin(theta)",
+    "init_u2": "cos(pi * r)",
+    "T": 2,
+    "dt": 0.0125,
+    "mesh_resolution": 25,
+    "damping": 0.1,
+    "spin": 3.0,
+    "err": 0.3,
+    "adapt": 1,
+    "hmax": 0.4,
+    "nbvx": 100,
+    "noise_amplitude": 1.0,
+    "vartheta": 0.5,
+    "fps": 8,
+    "arrow_length": 0.04,
+    "arrow_width": 0.25,
+    "elev": 32,
+    "azim": 12,
+    "noise_intensity": 0,
+    "alpha": 1
+}

@@ -1,43 +1,41 @@
 // Time-stepping parameters
-real T = 1.0; // Final time
-real dt = 0.05; // Time step size
+real T = 2; // Final time
+real dt = 0.0125; // Time step size
 int N = T / dt; // Number of time steps
 
-// Parameter theta (should >=0.5 to achieve numerical stability)
-//  theta=1: implicit scheme
-//  theta=0.5: semi-implicit scheme
-real theta=0.5;
+// Parameter vartheta (should >=0.5 to achieve numerical stability)
+//  vartheta=1: implicit scheme
+//  vartheta=0.5: semi-implicit scheme
+real vartheta= 0.5;
 
 // Parameter adapt
 //  adapt=1: adapt mesh at every time step
 //  adapt=0: fixed mesh
 int adapt=1;
-real erreur=0.2;
 
 // For energy plots (E: Dirichlet energy)
 real[int] E(N);
 
-// Damping parameter
-real alpha=1;
-
-// precession term (gyromanetic)
-real beta=1;
+// Damping and precession parameters
+real alpha=0.1;
+real beta= 3.0;
 
 // Noise amplitude
-real epsilon=0;
+real epsilon=1.0;
 real nu=sqrt(epsilon*dt); 
 
 int Niter0=0;
 real Titer=0; 
 
-// useful macros
-macro u [u0,u1,u2]//
-macro phi [phi0,phi1,phi2]//
-macro v [v0,v1,v2]//
+// MACROS
+macro u [u0,u1,u2]// unknown (3d vector field)
+macro phi [phi0,phi1,phi2]// test functions
+macro v [v0,v1,v2]// LLG's increments at each time step
 macro grad(a) [dx(a[0]),dy(a[0]),dx(a[1]),dy(a[1]),dx(a[2]),dy(a[2])]//
-macro R(a) [[0,-a[2],a[1]],[a[2],0,-a[0]],[-a[1],a[0],0]]//
-macro rho(a) [[1,a[2],-a[1]],[-a[2],1,a[0]],[a[1],-a[0],1]]//
-macro dw [dw0,dw1,dw2]//
+macro R(a) [[0,-a[2],a[1]],[a[2],0,-a[0]],[-a[1],a[0],0]]// linear map v to (a \times v) 
+macro rho(a) [[1,a[2],-a[1]],[-a[2],1,a[0]],[a[1],-a[0],1]]// linear map v to (v - a \times v)
+macro dw [dw0,dw1,dw2]// three components of noise
+macro uorth [u2*u0/sqrt(u0^2+u1^2), u2*u1/sqrt(u0^2+u1^2), sqrt(u0^2+u1^2)]// vector u \times e_O
 
 // Define a 2D unit disk mesh
 border Circle(t = 0, 2*pi) { 
@@ -46,7 +44,7 @@ border Circle(t = 0, 2*pi) {
 };
 
 // build the mesh inside the border
-real K=12; // Number of mesh points
+real K=25; // Number of mesh points
 mesh Th=buildmesh(Circle(K));
 
 // define finite element spaces
@@ -64,38 +62,58 @@ csvFile << "time,x,y,u0,u1,u2\n"; // Header row for CSV
 // phi0,phi1,phi2: test functions
 // lambda,mu: Lagrange multipliers
 // dw0,dw1,dw2: noise
-Vh u0=1,u1=0,u2=0,phi0,phi1,phi2,v0,v1,v2,lambda,mu,dw0=0,dw1=0,dw2=0,diag;
+Vh u0=1,u1=0,u2=0,phi0,phi1,phi2,v0,v1,v2,lambda,mu,dw0,dw1,dw2,diag;
 
 // Define variational formulation for LLG's increments
 problem sllg([v0,v1,v2,lambda],[phi0,phi1,phi2,mu])=int2d(Th)(alpha*v'*phi)
-+ int2d(Th)(beta*v'*R(u)'*phi)
-+ int2d(Th)((1+alpha^2)*theta*dt*grad(v)'*grad(phi))
-+ int2d(Th)((1+alpha^2)*dt*grad(u)'*grad(phi))
-+ int2d(Th,qft=qf1pTlump)(lambda*phi'*u)
-+ int2d(Th,qft=qf1pTlump)(mu*v'*u)
-+ int2d(Th)(dw'*rho(u)'*phi) 
-+ on(1,v0=0,v1=0,v2=0); // Dirichlet boundary conditions
+    + int2d(Th)(beta*v'*R(u)'*phi) // Gyromagnetic term
+	+ int2d(Th)((1+alpha^2)*vartheta*dt*grad(v)'*grad(phi)) // Crank-Nicolson term
+	+ int2d(Th)((1+alpha^2)*dt*grad(u)'*grad(phi)) // Laplacian
+	+ int2d(Th,qft=qf1pTlump)(lambda*phi'*u) // Lagrange multiplier (ensures phi is orthogonal to u)
+	+ int2d(Th,qft=qf1pTlump)(mu*v'*u) // Lagrange multiplier (ensures v is orthogonal to u)
+	+ int2d(Th)(dw'*rho(u)'*phi)   //terme de bruit
+	//+ int2d(Th)(dw0*uorth'*phi)   // degenerate noise
+    +on(1,v0=0,v1=0,v2=0); // Dirichlet boundary conditions
 
 // Parameter to tweak initial condition
 real gamma=0.05*3;
 
 // Inital condition
 func r = sqrt(x^2 + y^2);
-func f = atan2(y, x);
-u0 = sin(pi * r) * cos(f);
-u1 = sin(pi * r) * sin(f);
+func theta = atan2(y, x);
+u0 = sin(pi * r) * cos(theta);
+u1 = sin(pi * r) * sin(theta);
 u2 = cos(pi * r);
+Vh NN=sqrt(u0^2+u1^2+u2^2);
+u0=u0/NN;u1=u1/NN;u2=u2/NN; // renormalize to get unit vector field
+
 
 // Time-stepping loop
 for (int tStep = 0; tStep <= N; tStep++) {
     real currentTime = tStep * dt;
+
+    // Retrieve Gaussian noise values at current time
+    if (epsilon>0) {
+    Vh s0,s1,s2,psi0,psi1;
+    varf mass(psi0,psi1) = int2d(Th)(psi0*psi1);
+    matrix M=mass(Vh,Vh);
+    real[int] D(M.n); // .n: ffem operator to get the number of rows
+    D=M.diag; // .diag: ffem operator to extract the diagonal entries
+    Vh diag=0;diag[]=D;dw0=0;dw1=0;dw2=0;
+    problem noise([dw0,dw1,dw2],[s0,s1,s2])=
+        int2d(Th)(sqrt(diag)*(dw0*s0+dw1*s1+dw2*s2),qft=qf1pTlump,optimize=0)
+        +int2d(Th,qft=qf1pTlump,optimize=0)(nu*(log(randreal1())*cos(2*pi*randreal1()))*s0
+	    +nu*(log(randreal1())*cos(2*pi*randreal1()))*s1
+    	+nu*(log(randreal1())*cos(2*pi*randreal1()))*s2);
+    noise; //
+    }
 
     sllg; // Solve at the current time step (and assigns the result to v=[v0,v1,v2])
 
     // adapt mesh if adapt !=0
     Vh NN=sqrt((u0+v0)^2+(u1+v1)^2+(u2+v2)^2);
     if (adapt) {
-        Th=adaptmesh(Th,[u1,u2],err=erreur);
+        Th=adaptmesh(Th,[u1,u2],err=0.3, hmax=0.4, nbvx=100);
     }
   
     // Renormalization step to ensure that new solution is a unit-vector

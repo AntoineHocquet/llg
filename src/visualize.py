@@ -8,172 +8,124 @@ import numpy as np
 from matplotlib import animation
 
 
-# Constants
-FPS = 10 # frames per second
-INTERVAL = 1000 / FPS # interval between frames in milliseconds
-ARROW_LENGTH_RATIO = 0.04 # relative length of the arrows
-ARROW_WIDTH=0.3 # relative width of the arrows
+def draw_llg_frame(ax, x, y, u0, u1, u2, t, elev, azim, arrow_length, arrow_width):
+    """
+    Draw a 3D frame for the LLG vector field at time t.
+    """
+    ax.clear()
+
+    # Plot vectors
+    ax.quiver(
+        x, y, [0] * len(x),
+        u0, u1, u2,
+        length=arrow_length,
+        linewidth=arrow_width,
+        normalize=True,
+        color='b',
+        arrow_length_ratio=0.6
+    )
+
+    # Plot unit disk
+    ax.plot_trisurf(x, y, [0] * len(x), color='lightgreen', alpha=0.3)
+
+    # Labels and view
+    ax.set_title(f"LLG equation at time = {t:.2f}s")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
+    ax.view_init(elev=elev, azim=azim)
 
 
-# static visualization
-def generate_visualizations():
+def generate_visualizations(params):
     """
     Generate static visualizations of the LLG equation.
     The visualizations are saved in the 'data' directory.
     """
-    print("Generating visualization...")
+    elev = params["elev"]
+    azim = params["azim"]
+    arrow_length = params["arrow_length"]
+    arrow_width = params["arrow_width"]
 
     # Data paths
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_path = os.path.join(project_root, "edp", "solution_data.csv")
     output_path = os.path.join(project_root, "data", "llg_final.png")
 
-    # Load the CSV data
+    if not os.path.exists(data_path):
+        print(f"❌ CSV data file not found: {data_path}")
+        return
+
     df = pd.read_csv(data_path)
-    last_t = df["time"].max()
-    sub_df = df[df["time"] == last_t]
+
+    # Get the last time-slice
+    T = df["time"].max()
+    sub_df = df[df["time"] == T]
+
+    # Extract coordinates and magnetization
+    x = sub_df["x"]
+    y = sub_df["y"]
+    u0 = sub_df["u0"]
+    u1 = sub_df["u1"]
+    u2 = sub_df["u2"]
 
     # 3D plot
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    x=sub_df["x"]
-    y=sub_df["y"]
-    z=[0]*len(x)
+    ax: Axes3D = fig.add_subplot(111, projection='3d')
 
-    # plot of the LLG vectors
-    ax.quiver(
-        x,
-        y,
-        z,
-        sub_df["u0"],
-        sub_df["u1"],
-        sub_df["u2"],
-        length=ARROW_LENGTH_RATIO
-    )
-    ax.set_title(f"LLG at final time t = {last_t}")
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_zlabel("z")
-
-    # plot of the x,y unit disk in lightgreen
-    ax.plot_trisurf(
-        x,
-        y,
-        z,
-        color='lightgreen',
-        alpha=0.3)
+    draw_llg_frame(ax, x, y, u0, u1, u2, T, elev, azim, arrow_length, arrow_width)
 
     # Save the figure
     plt.savefig(output_path)
-    print(f"\u2705 Saved final frame to: {output_path}")
+    print(f"✅ Saved final frame to: {output_path}")
 
 
-# animation
-def generate_gif():
+def generate_gif(params):
     """
     Generate a GIF animation of the LLG equation.
     The animation is saved in the 'data' directory.
     """
-    print("Generating animation...")
+    elev = params["elev"]
+    azim = params["azim"]
+    arrow_length = params["arrow_length"]
+    arrow_width = params["arrow_width"]
+    fps = params["fps"]
 
-    # Data paths
+    # Paths
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     csv_path = os.path.join(project_root, "edp", "solution_data.csv")
     gif_path = os.path.join(project_root, "data", "llg_equation_simulation.gif")
 
-    # Load the CSV data
-    data = pd.read_csv(csv_path)
+    if not os.path.exists(csv_path):
+        print(f"❌ CSV data file not found: {csv_path}")
+        return
 
-    # Extract unique time steps
+    data = pd.read_csv(csv_path)
     time_steps = data['time'].unique()
 
-    # Prepare plot
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-    # Extract mesh points from the first time step
-    sub_data = data[data['time'] == time_steps[0]]
-    x = sub_data['x']
-    y = sub_data['y']
-    z = [0] * len(x)
-
-    # plot of the LLG vectors
-    ax.quiver(
-        x,
-        y,
-        z,
-        sub_data['u0'],
-        sub_data['u1'],
-        sub_data['u2'],
-        length=ARROW_LENGTH_RATIO,
-        linewidth=ARROW_WIDTH,
-        normalize=True,
-        color='b'
-    )
-
-        # plot of the x,y unit disk in lightgreen
-    ax.plot_trisurf(
-        x,
-        y,
-        z,
-        color='lightgreen',
-        alpha=0.3)
-
-
-    # Update function for the animation
     def update_quiver(frame):
-        """
-        Update the quiver plot for the given frame.
-        It is passed as an argument to FuncAnimation.
-        Input:
-            frame (int): The current frame index.
-        Output:
-            None
-        """
         current_data = data[data['time'] == time_steps[frame]]
-        ax.clear()
-        
-        # update the vector field
-        quiver = ax.quiver(
+        draw_llg_frame(
+            ax,
             current_data['x'],
             current_data['y'],
-            [0] * len(current_data['x']),
             current_data['u0'],
             current_data['u1'],
             current_data['u2'],
-            length=ARROW_LENGTH_RATIO,
-            linewidth=ARROW_WIDTH,
-            normalize=True,
-            color='b'
+            time_steps[frame],
+            elev, azim, arrow_length, arrow_width
         )
 
-        # update the unit disk
-        ax.plot_trisurf(
-            current_data['x'],
-            current_data['y'],
-            [0] * len(current_data['x']),
-            color='lightgreen',
-            alpha=0.3
-        )
-
-        ax.set_title(f"LLG equation at time = {time_steps[frame]:.2f}s")
-        ax.set_xlabel("X")
-        ax.set_ylabel("Y")
-
-
-    # Create the animation
     anim = animation.FuncAnimation(
         fig,
         update_quiver,
         frames=len(time_steps),
-        interval=INTERVAL,
+        interval=1000 / fps,
         repeat=False
-        )
+    )
 
-    # Save the animation as a GIF
     anim.save(gif_path, writer='imagemagick')
-
-    # Close the plot after saving
     plt.close()
-
-    print(f"\u2705 Animation saved to: {gif_path}")
+    print(f"✅ Animation saved to: {gif_path}")
