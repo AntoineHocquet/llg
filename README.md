@@ -1,75 +1,158 @@
-# LLG Simulation App
+# 🆀 LLG Simulation App
 
-This project is a **Dockerized scientific simulation pipeline** using FreeFEM++, orchestrated entirely through Python.
+This project is a **modular scientific simulation pipeline** for solving the **Landau–Lifshitz–Gilbert (LLG) equation** on a 2D disk using [FreeFEM++](https://freefem.org/), powered by Docker and a Python CLI.
 
-It allows you to:
+The baseline code was adapted from the author's **PhD simulation framework** for solving the stochastic Landau-Lifshitz-Gilbert equation with Gaussian noise. The finite element formulation follows the logic of the **Crank–Nicolson scheme with projection step** as introduced in:
 
-- 📊 Solve the Landau-Lifshitz-Gilbert (LLG) equation on a 2D disk via FreeFEM++
-- 🐳 Run simulations inside Docker for portability
-- ⚙️ Configure all parameters from a simple `params.json` file
-- 📈 Visualize results (static plots + animated GIF)
-- ✅ Run end-to-end tests using `pytest`
-- 📦 Install and use as a CLI tool via `simulate`
+> F. Alouges & A. De Bouard, *A semi-discrete scheme for the stochastic LLG equation*, **Stochastic PDE: Analysis and Computations**, 2014. \[https://link.springer.com/article/10.1007/s40072-014-0033-7]
+
+and, see Chapter 5 in my PhD thesis:
+
+> The Landau-Lifshitz-Gilbert equation driven by Gaussian noise: \[https://pastel.hal.science/tel-01265433v2]
 
 ---
 
-## 📦 Installation
+## 📆 Features
+
+* 📜 Define all physical and numerical parameters in a single `params.json`
+* 🐳 Run simulations inside a Docker container for full reproducibility
+* 🧯 Visualize magnetization fields in 3D (static + animated GIF)
+* ⚙️ Easily tweak parameters via command line (`--set key=value`)
+* 🧪 Clean, testable Python codebase with `venv` and editable install
+
+---
+
+## 🚀 Installation
 
 Clone the repo and set up a virtual environment:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/llg.git
+git clone https://github.com/AntoineHocquet/llg.git
 cd llg
 python3 -m venv venv
 source venv/bin/activate
 pip install -e .
-
----
-
-## 🚀 Usage
-
-Run the full simulation + visualization pipeline:
-
-```bash
-simulate --run all
-
-Individual steps:
-
-```bash
-simulate --run sim     # Run FreeFEM via Docker
-simulate --run viz     # Plot static matplotlib visual
-simulate --run gif     # Generate animated .gif
-
-All outputs go into the data/ directory.
-
-
----
-
-## ⚙️ Configuration
-
-All parameters are defined in params.json:
-
 ```
+
+Make sure [Docker](https://www.docker.com/) is installed and running.
+
+---
+
+## 🥪 Usage
+
+### ⚙️ Run a full pipeline:
+
+```bash
+simulate --sim --viz --gif
+```
+
+### 🧮 Run only the simulation:
+
+```bash
+simulate --sim
+```
+
+### 🎨 Generate static plot:
+
+```bash
+simulate --viz
+```
+
+### 🔀 Generate animated GIF:
+
+```bash
+simulate --gif
+```
+
+### ⚙️ Override parameters at runtime:
+
+```bash
+simulate --sim --set T=2.0 damping=0.1 arrow_length=0.05
+```
+
+---
+
+## ⚙️ Parameters (`params.json`)
+
+You can configure everything via the JSON file **or override it using `--set`**.
+
+| Parameter         | Type   | Description                                             |
+| ----------------- | ------ | ------------------------------------------------------- |
+| `T`               | float  | Final simulation time                                   |
+| `dt`              | float  | Time step size                                          |
+| `mesh_resolution` | int    | Mesh resolution of the disk                             |
+| `damping`         | float  | Damping coefficient in the LLG equation                 |
+| `noise_amplitude` | float  | Strength of stochastic perturbation (optional, if used) |
+| `arrow_length`    | float  | Length of quiver arrows in visualization                |
+| `arrow_width`     | float  | Line width of the quiver arrows                         |
+| `elev`            | float  | 3D elevation angle of the camera (in degrees)           |
+| `azim`            | float  | Azimuthal angle of the camera                           |
+| `fps`             | int    | Frames per second for GIF generation                    |
+| `init_u0`         | string | FreeFEM expression for u₀ initial condition             |
+| `init_u1`         | string | FreeFEM expression for u₁ initial condition             |
+| `init_u2`         | string | FreeFEM expression for u₂ initial condition             |
+
+Example `params.json`:
+
+```json
 {
   "T": 1.0,
   "dt": 0.05,
-  "mesh_resolution": 50
+  "mesh_resolution": 50,
+  "damping": 0.1,
+  "arrow_length": 0.04,
+  "arrow_width": 0.5,
+  "elev": 30,
+  "azim": 135,
+  "fps": 10,
+  "init_u0": "sin(pi * r) * cos(f)",
+  "init_u1": "sin(pi * r) * sin(f)",
+  "init_u2": "cos(pi * r)"
 }
 ```
 
-Edit these to modify simulation behavior.
+---
 
+## 🖼️ Outputs
+
+All outputs are saved to the `data/` folder by default.
+
+### 🔹 Static frame:
+
+![Static Plot](data/llg_final.png)
+
+### ♻️ Animated GIF:
+
+![GIF](data/llg_equation_simulation.gif)
 
 ---
 
-## 🌍 Dependencies
+## 🧰 Requirements
 
-Python 3.8+
+* Python 3.8+
+* Docker
+* matplotlib, pandas (installed via `pip install -e .`)
 
-Docker
+---
 
-FreeFEM++ (via container antoinehocquet/freefem)
+## 🙌 Credits
 
-matplotlib
+This project uses:
 
-pandas
+* FreeFEM++ for FEM-based PDE solving
+* Docker for isolated environments
+* matplotlib for 3D visualizations
+
+---
+
+## 🔄 Coming Soon
+
+* `--preset` profiles for switching between initial conditions
+* MP4 rendering via `ffmpeg`
+* Parameter sweep support (`--grid T=[0.5,1.0,1.5]`)
+
+---
+
+## 🔀 License
+
+MIT License
