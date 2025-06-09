@@ -105,11 +105,14 @@ Example `params.json`:
   "elev": 30,
   "azim": 135,
   "fps": 10,
-  "init_u0": "sin(pi * r) * cos(f)",
-  "init_u1": "sin(pi * r) * sin(f)",
+  "init_u0": "sin(pi * r) * cos(theta)",
+  "init_u1": "sin(pi * r) * sin(theta)",
   "init_u2": "cos(pi * r)"
 }
 ```
+Here theta, and r are the usual polar coordinates of the unit disk in R^2.
+One may also use cartesian coordinates x,y, x^2+y^2<=1.
+Make sure that the provided vector field lives in the unit sphere (as in the physical model), otherwise an error might occur.
 
 ---
 
