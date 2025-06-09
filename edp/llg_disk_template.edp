@@ -24,9 +24,6 @@ real beta= %%spin%%;
 real epsilon=%%noise_amplitude%%;
 real nu=sqrt(epsilon*dt); 
 
-int Niter0=0;
-real Titer=0; 
-
 // MACROS
 macro u [u0,u1,u2]// unknown (3d vector field)
 macro phi [phi0,phi1,phi2]// test functions
@@ -62,7 +59,7 @@ csvFile << "time,x,y,u0,u1,u2\n"; // Header row for CSV
 // phi0,phi1,phi2: test functions
 // lambda,mu: Lagrange multipliers
 // dw0,dw1,dw2: noise
-Vh u0=1,u1=0,u2=0,phi0,phi1,phi2,v0,v1,v2,lambda,mu,dw0,dw1,dw2,diag;
+Vh u0=1,u1=0,u2=0,phi0,phi1,phi2,v0,v1,v2,lambda,mu,dw0=0,dw1=0,dw2=0,diag;
 
 // Define variational formulation for LLG's increments
 problem sllg([v0,v1,v2,lambda],[phi0,phi1,phi2,mu])=int2d(Th)(alpha*v'*phi)
@@ -74,9 +71,6 @@ problem sllg([v0,v1,v2,lambda],[phi0,phi1,phi2,mu])=int2d(Th)(alpha*v'*phi)
 	+ int2d(Th)(dw'*rho(u)'*phi)   //terme de bruit
 	//+ int2d(Th)(dw0*uorth'*phi)   // degenerate noise
     +on(1,v0=0,v1=0,v2=0); // Dirichlet boundary conditions
-
-// Parameter to tweak initial condition
-real gamma=0.05*3;
 
 // Inital condition
 func r = sqrt(x^2 + y^2);
@@ -102,9 +96,11 @@ for (int tStep = 0; tStep <= N; tStep++) {
     Vh diag=0;diag[]=D;dw0=0;dw1=0;dw2=0;
     problem noise([dw0,dw1,dw2],[s0,s1,s2])=
         int2d(Th)(sqrt(diag)*(dw0*s0+dw1*s1+dw2*s2),qft=qf1pTlump,optimize=0)
-        +int2d(Th,qft=qf1pTlump,optimize=0)(nu*(log(randreal1())*cos(2*pi*randreal1()))*s0
-	    +nu*(log(randreal1())*cos(2*pi*randreal1()))*s1
-    	+nu*(log(randreal1())*cos(2*pi*randreal1()))*s2);
+        +int2d(Th,qft=qf1pTlump,optimize=0)(
+            nu*(log(randreal1())*cos(2*pi*randreal1()))*s0
+	        +nu*(log(randreal1())*cos(2*pi*randreal1()))*s1
+    	    +nu*(log(randreal1())*cos(2*pi*randreal1()))*s2
+        );
     noise; //
     }
 
